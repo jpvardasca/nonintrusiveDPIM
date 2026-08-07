@@ -1,0 +1,94 @@
+*Heading
+** Abaqus input file for UEL testing with material model: Neo-Hookean
+** 3D HEX8 (U3) type element using uel_mech.for
+** Nonlinear geometry, encastred boundary conditions
+*Preprint, echo=NO, model=NO, history=NO, contact=NO
+**************************************************
+*Node
+1,           1.,           1.1,          1.2
+2,           1.,           0.,           1.2
+3,           1.,           1.1,          0.
+4,           1.,           0.,           0.
+5,           0.,           1.1,          1.2
+6,           0.,           0.,           1.2
+7,           0.,           1.1,          0.
+8,           0.,           0.,           0.
+*Nset, nset=All, generate
+ 1,  8,   1
+*Nset, nset=Set-2  
+3,  4, 7, 8
+*Nset, nset=node1  
+1,
+*Nset, nset=node2  
+2,
+*Nset, nset=node3  
+3,
+*Nset, nset=node4  
+4,
+*Nset, nset=node5  
+5,
+*Nset, nset=node6  
+6,
+*Nset, nset=node7  
+7,
+*Nset, nset=node8  
+8,
+**************************************************
+**User Element, Type=U3, Nodes=8, Coordinates=3, Properties=4, Iproperties=3
+*User Element,Type=U3,Nodes=8,Coordinates=3,Properties=3,Iproperties=4, Unsym
+1, 2, 3
+*Element, type=U3, elset=allUEL
+1, 5, 6, 8, 7, 1, 2, 4, 3
+*Elset, elset=allUEL
+1
+**************************************************
+*UEL PROPERTY, ELSET=allUEL
+**Young's modulus (E), Poisson's ratio (ν), density, number of integration points (nInt)
+** matID (1=Neo-Hookean), nPostVars
+210e9, 0.3, 7850, 8, 0, 1, 12
+**************************************************
+** same element connectivity as the user element
+** uses built-in abaqus element to overlay results
+** negligible young's modulus won't affect the result
+*Element, type=C3D8
+100001, 5, 6, 8, 7, 1, 2, 4, 3
+*Elset, elset=elDummy 
+100001
+*Solid section, elset=elDummy, material=Dummy
+*Material, name=Dummy
+*Elastic
+1.e-20
+** strain vector (6) and stress vector (6) as user output
+*User output variables
+12
+**************************************************
+** STEP: LoadStep
+*Step, name=LoadStep, nlgeom=YES, unsymm=YES, inc=1
+*Static, direct
+1., 1.,
+** Boundary conditions
+*Boundary
+Set-2, ENCASTRE
+node1, 1, 1, 0.24
+node1, 2, 2, 0.02195764858256038
+node1, 3, 3, -0.10258071245105348
+node2, 1, 1, 0.23999999999999916
+node2, 2, 2, -0.021957648582557637
+node2, 3, 3, -0.10258071245105195
+node5, 1, 1, 0.2399999999999996
+node5, 2, 2, -0.021957648582557214
+node5, 3, 3, 0.10258071245105196
+node6, 1, 1, 0.2399999999999995
+node6, 2, 2, 0.021957648582560864
+node6, 3, 3, 0.10258071245105345
+** Output requests
+*Restart, write, frequency=0
+*Output, field, variable=PRESELECT
+*Node Output
+RF, U
+*Element Output, elset=eldummy
+UVARM
+*Element Matrix Output, Elset=allUEL, File Name=Meu_input_file_1, Output File=User Defined, Stiffness=Yes
+*Output, history, variable=PRESELECT
+*End Step
+
