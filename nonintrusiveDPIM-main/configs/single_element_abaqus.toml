@@ -1,0 +1,58 @@
+# One hex8 element (1 x 1.1 x 1.2), 4 clamped nodes, 12 free DOFs. Use it for the smoke test.
+# Backend: the Abaqus UEL. EDIT the [abaqus] section for your Abaqus machine first
+# (see scripts/build_uel_library.md), then run the smoke test:
+#   python scripts/abaqus_smoke_test.py configs/single_element_abaqus.toml
+name = "single_element_abaqus"
+
+[model]
+inp = "../test/Meu_input_file.inp"
+clamped_nset = "Set-2"
+# processed matrices of the repository: used by the smoke test as an extra reference
+stiffness_mtx = "../test/Meu_input_file_stiffness_matrix_E_210e9.mtx"
+mass_mtx = "../test/Meu_input_file_mass_matrix_E_210e9.mtx"
+
+[step]
+d_ref = 1.0
+eps = 0.24
+
+[backend]
+kind = "abaqus"
+
+[abaqus]
+# "local": Abaqus runs on this machine.
+# "spool": a worker (scripts/abaqus_worker.py) runs on the Abaqus machine and exchanges
+#          files through the shared folder spool_dir.
+runner = "local"
+command = "abaqus"
+max_parallel = 1                # concurrent jobs; limited by your licence tokens
+# spool_dir = "//server/share/nistep_spool"      # needed for runner = "spool"
+# Precompiled UEL libraries (paths on the Abaqus machine). With runner = "spool" these are
+# given to the worker instead, and are used here only to identify the model.
+user_lib_dir = "C:/nistep/uel_lib/stiffness"
+mass_lib_dir = "C:/nistep/uel_lib/mass"
+# Without libraries, comment the two lines above and use flat Fortran sources instead:
+# user_source = "C:/nistep/uel_flat/uel_flat.for"
+# mass_source = "C:/nistep/uel_flat/uel_mass_flat.for"
+mass_from = "uel"               # "processed" takes [model] mass_mtx instead of a mass job
+timeout_s = 900
+retries = 1
+keep_job_dirs = "failed"
+
+[damping]
+alpha = 0.0
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 3
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = false
+
+[cache]
+# every tangent matrix is kept here, so an interrupted run resumes without repeating jobs
+dir = "../cache"
+lru_items = 64

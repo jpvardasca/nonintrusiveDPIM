@@ -1,0 +1,28 @@
+# One hex8 element (1 x 1.1 x 1.2), 4 clamped nodes, 12 free DOFs.
+# Backend: PySVK, the numpy stand-in for the Abaqus UEL (no Abaqus needed).
+name = "single_element_pysvk"
+
+[model]
+inp = "../test/Meu_input_file.inp"
+clamped_nset = "Set-2"
+
+[step]
+d_ref = 1.0
+eps = 0.24
+
+[backend]
+kind = "pysvk"
+
+[damping]
+alpha = 0.0
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 3
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = false

@@ -1,0 +1,33 @@
+name = "MORFEStEP"
+uuid = "c76c546a-3d71-4209-9460-519d858b4494"
+authors = ["jpvardasca"]
+version = "0.1.0"
+
+[deps]
+Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
+MORFE = "5d3630f1-b769-440d-b6a6-faf39c53b66e"
+NPZ = "15e1cf62-19b3-5cfa-8e77-841668bca605"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+
+[compat]
+Arpack = "0.5.3"
+CondaPkg = "0.2.38"
+LinearAlgebra = "1.11.0"
+LinearMaps = "3.11.4"
+MORFE = "0.2.0"
+NPZ = "0.4.3"
+PythonCall = "0.9.37"
+SparseArrays = "1.11.0"
+TOML = "1.0.3"
+
+[extras]
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test", "Random"]

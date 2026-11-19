@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Run outputs / caches (nistep + MORFEStEP)
+runs/
+work/
+cache/
+
+# Abaqus scratch files inside job work directories
+work/**/*.odb
+work/**/*.msg
+work/**/*.sta
+work/**/*.dat
+work/**/*.prt
+work/**/*.com
+work/**/*.sim
+work/**/*.log
+
+# CondaPkg environment created by PythonCall (do NOT ignore Manifest.toml)
+julia/MORFEStEP/.CondaPkg/
+
+# Thesis material and LaTeX sources must never be tracked
+Tese_limpa/
+*.tex
+*.bib
+*.cls
+*.sty
+*.bst
+*.pdf
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc
+*.nlo
+*.nls
+*.glo
+*.gls
+*.ist

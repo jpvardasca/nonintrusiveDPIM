@@ -1,0 +1,33 @@
+# Cantilever beam: 500 hex8 elements, 918 nodes, 2700 free DOFs (thesis: omega_1 = 8.425818, d_ref = 10).
+# Backend: PySVK, the numpy stand-in for the Abaqus UEL (no Abaqus needed).
+name = "cantilever_pysvk"
+
+[model]
+inp = "../test/Cantilever_Beam_500_elements_UEL_modified.inp"
+clamped_nset = "Set-2"
+
+[step]
+d_ref = 10.0
+eps = 0.24
+
+[backend]
+kind = "pysvk"
+
+[damping]
+alpha = 0.0
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 5
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = false
+
+[output]
+# thesis monitoring node at the free end; the first mode bends the beam along x
+monitor_node = 768
+monitor_dof = 1

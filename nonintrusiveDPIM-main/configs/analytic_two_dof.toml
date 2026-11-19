@@ -1,0 +1,26 @@
+# StEP.tex 2-DoF mass-spring example (exact analytic backend).
+name = "analytic_two_dof"
+
+[step]
+d_ref = 1.0          # c = eps * d_ref = 0.24
+eps = 0.24
+
+[backend]
+kind = "analytic"
+
+[analytic]
+model = "two_dof"
+
+[damping]
+alpha = 0.001
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 5
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = true

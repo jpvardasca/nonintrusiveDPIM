@@ -1,0 +1,28 @@
+# One-DOF oscillator: u" + u + 0.3 u^2 + 0.5 u^3 = 0 (exact analytic backend, no damping).
+# Closed-form backbone: omega = 1 + 0.15 a^2, a = amplitude of the fundamental harmonic.
+name = "analytic_duffing"
+
+[step]
+d_ref = 1.0
+eps = 0.24
+
+[backend]
+kind = "analytic"
+
+[analytic]
+model = "duffing"
+nl_scale = 1.0
+
+[damping]
+alpha = 0.0
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 5
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = true

@@ -1,0 +1,33 @@
+# MEMS resonator: 240 hex8 elements, 525 nodes, 1521 free DOFs (thesis: omega_1 = 1.819006, d_ref = 20).
+# Backend: PySVK, the numpy stand-in for the Abaqus UEL (no Abaqus needed).
+name = "mems_pysvk"
+
+[model]
+inp = "../test/mems_abaqus_UEL_modified.inp"
+clamped_nset = "Set-2"
+
+[step]
+d_ref = 20.0
+eps = 0.24
+
+[backend]
+kind = "pysvk"
+
+[damping]
+alpha = 5e-7
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 5
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = false
+
+[output]
+# thesis monitoring node; the first mode moves it along y (the plate is 1 thick in y)
+monitor_node = 45
+monitor_dof = 2

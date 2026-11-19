@@ -1,0 +1,29 @@
+# Clamped-clamped beam: 200 hex8 elements, 606 nodes, 1782 free DOFs.
+# The thesis used a 280-element mesh, so do not compare numbers with the thesis.
+# Backend: PySVK, the numpy stand-in for the Abaqus UEL (no Abaqus needed).
+name = "cc200_pysvk"
+
+[model]
+inp = "../test/Clamped_Clamped_beam_200_elements_UEL_modified.inp"
+clamped_nset = "Set-2"
+
+[step]
+d_ref = 0.1
+eps = 0.24
+
+[backend]
+kind = "pysvk"
+
+[damping]
+alpha = 0.0
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 5
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = false

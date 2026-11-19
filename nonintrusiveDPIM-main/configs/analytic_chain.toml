@@ -1,0 +1,28 @@
+# Fixed-fixed spring chain with quadratic + cubic springs (exact analytic backend).
+name = "analytic_chain"
+
+[step]
+d_ref = 1.0
+eps = 0.24
+
+[backend]
+kind = "analytic"
+
+[analytic]
+model = "spring_chain"
+n = 20
+nl_scale = 1.0
+
+[damping]
+alpha = 0.001
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 5
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = true

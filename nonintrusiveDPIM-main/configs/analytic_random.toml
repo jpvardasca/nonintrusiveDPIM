@@ -1,0 +1,30 @@
+# Random sparse SPD model with generalised quadratic + cubic springs (exact analytic backend).
+name = "analytic_random"
+
+[step]
+d_ref = 1.0
+eps = 0.24
+
+[backend]
+kind = "analytic"
+
+[analytic]
+model = "random_sparse"
+n = 50
+seed = 0
+density = 0.1
+nl_scale = 1.0
+
+[damping]
+alpha = 0.001
+beta = 0.0
+
+[rom]
+masters = [1]
+order = 5
+style = "complex_normal_form"
+resonance_tol = 0.05
+
+[engine]
+mode = "lazy"
+debug = true
