@@ -291,7 +291,10 @@ class JobDeck:
                         for node in dofmap.free_nodes for d in range(1, NDOF + 1)]
         self.n_dof = dofmap.n_dof
 
-    def render(self, U, matrix_file_name: str) -> str:
+    def render(self, U, matrix_file_name: str, output: str = "stiffness") -> str:
+        """Job deck. ``output`` selects the matrix Abaqus writes: "stiffness" (Stiffness=Yes,
+        the deck's own setting) or "mass" (Mass=Yes; needed with the mass UEL library, which
+        otherwise writes its matrix labelled as stiffness)."""
         U = np.asarray(U, dtype=np.float64).ravel()
         if U.shape != (self.n_dof,):
             raise ValueError(f"U must have shape ({self.n_dof},), got {U.shape}")
@@ -299,11 +302,18 @@ class JobDeck:
             raise ValueError("U contains non-finite values")
         if not re.fullmatch(r"[A-Za-z0-9_\-]+", matrix_file_name):
             raise ValueError(f"matrix file name must be alphanumeric, got {matrix_file_name!r}")
+        if output not in ("stiffness", "mass"):
+            raise ValueError(f"output must be 'stiffness' or 'mass', got {output!r}")
         bc = ["*Boundary", f"{self._clamped}, ENCASTRE"]
         bc.extend(p + format(u, ".17e") for p, u in zip(self._prefix, U))
         tail = list(self._tail)
-        tail[self._matrix_line] = _FILE_NAME.sub(
-            lambda m: m.group(1) + matrix_file_name, tail[self._matrix_line], count=1)
+        line = _FILE_NAME.sub(lambda m: m.group(1) + matrix_file_name, tail[self._matrix_line],
+                              count=1)
+        if output == "mass":
+            if "Stiffness=Yes" not in line:
+                raise InpError("expected 'Stiffness=Yes' in the *Element Matrix Output line")
+            line = line.replace("Stiffness=Yes", "Mass=Yes")
+        tail[self._matrix_line] = line
         return "\n".join([self._head, *bc, *tail]) + "\n"
 
 

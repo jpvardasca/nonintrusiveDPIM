@@ -5,6 +5,94 @@
 
 ---
 
+## Status on the Abaqus PC (updated 2026-11-22)
+
+This section is for the Claude session on the Abaqus PC, so it can carry on from the session
+on the development PC. Chats are not shared between machines; this note and `git` are the
+hand-over. Read §0 (rules) before doing anything.
+
+**The machine.**
+
+- Repository: `C:\Users\joanavpereira\Documents\nonintrusiveDPIM\nonintrusiveDPIM-main`,
+  branch `feature/morfe-closure`.
+- Windows with PowerShell.
+- `abaqus` is on `PATH` (`C:\SIMULIA\Commands\abaqus.bat`), with Intel Fortran Classic
+  2021.4.0.
+- The Abaqus version is not recorded yet: run `abaqus information=release`.
+
+**Already done there (by the user, guided from the development PC).**
+
+1. Python virtual environment `.venv` (Python 3.11) with `nistep` installed.
+2. Julia 1.11.6 environment `julia/MORFEStEP` instantiated and precompiled.
+3. Tests before the fix below:
+   - `pytest`: 193 passed.
+   - Julia `Pkg.test()`: 621/621. The near-resonance warnings are expected.
+4. P8.2, the UEL libraries. `abaqus make` COMPLETED for both sources:
+   - `C:\Users\joanavpereira\Documents\nistep_uel\stiffness\standardU.dll` (12 272 640 bytes);
+   - `C:\Users\joanavpereira\Documents\nistep_uel\mass\standardU.dll` (12 270 080 bytes).
+5. Local config edits. These are **not in git; keep them, do not commit them**:
+   - `configs/*_abaqus.toml` have `user_lib_dir` and `mass_lib_dir` set to those two folders, and
+     `command = "abaqus"`.
+   - `configs/single_element_abaqus.toml` has `keep_job_dirs = "all"` for diagnosis. Set it back to
+     `"failed"` once the smoke test passes.
+
+**Found on the first smoke test (P8.6, single element), and fixed.**
+
+- **The failure.** The mass job failed with `matrix type STIFFNESS, expected MASS`.
+  - Its `abaqus_v6.env` pointed at the mass folder, as it should.
+  - The cause is that Abaqus labels the element-matrix output from the deck's
+    `*Element Matrix Output` request (`Stiffness=Yes`), not from the UEL library.
+- **The fix.** It is in the commit after `7eb2fab`:
+  - `JobDeck.render(..., output="mass")` writes `Mass=Yes` for mass jobs;
+  - the backend also checks the matrix values, so a swapped library is still caught
+    (`translation_ratio`: a tangent stiffness maps rigid translations to zero, a mass does not;
+    threshold `TRANSLATION_TOL = 1e-2`);
+  - the mock Abaqus now labels its output the same way.
+  - Result: Python suite 196 passed on the development PC.
+- **What the same run already confirms** (record this under P8.3 once the full run passes):
+  - the single-element jobs passed all four runner checks, so `usub_lib_dir` picks up the
+    precompiled library and the `.sta` success sentence matches;
+  - the raw `.mtx` file of a real Abaqus parsed without error.
+- **VERIFY:** whether `Mass=Yes` with the mass library gives the consistent mass (check
+  `mass_vs_pysvk`).
+
+**Next, in order (on the Abaqus PC).**
+
+1. Get the fix: `git pull`. The local config edits stay.
+2. Run the Python tests: `.venv\Scripts\python -m pytest python/tests -q`. Expect 196 passed. The
+   summary line may be hidden: check that the exit code is 0.
+3. Run the single-element smoke test:
+   `.venv\Scripts\python scripts\abaqus_smoke_test.py configs\single_element_abaqus.toml --json work\smoke_single.json`.
+   - Exit code 0 means every check passed.
+   - Record under P8.6: each printed value, the seconds per job and the Abaqus version.
+   - If a check fails, stop and report the values to the user. Use the table in
+     `scripts/build_uel_library.md` §4. **Never edit the Fortran UEL without asking (rule 3).**
+4. If step 3 passes:
+   - set `keep_job_dirs = "failed"` again;
+   - run the same command with `configs\mems_abaqus.toml` (adds check `d_K0_vs_processed`);
+   - record it under P8.6.
+5. Tick P8.2 and P8.6. Record under P8.3 the outcome of its three VERIFY items.
+6. Then the host items, one at a time:
+   - P10.1–P10.4;
+   - P11.1, the forced order-convergence run (`configs/mems_forced_abaqus.toml`);
+   - P11.3.
+7. Open decisions to ask the user when they matter:
+   - D3: licence tokens, which set `max_parallel`;
+   - D4: HBM export layout;
+   - D5: legacy or MORFE2.0 results.
+8. Before long unattended runs, make sure the PC does not sleep:
+   - `powercfg /change standby-timeout-ac 0`;
+   - `powercfg /requests` to check.
+
+**Rules that matter here.**
+
+- Commit or push only when the user asks.
+- Never add thesis material to git (rule 4).
+- Never change `test/`, `module/` or the Fortran.
+- Every commit message ends with the attribution line the session gives.
+
+---
+
 ## 0. Rules for the implementing agent
 
 1. **One step at a time.** Do the step, run its acceptance checks, and record the results under the step: tick the box and paste the test summary. Then move to the next step. Never start a phase whose predecessors have failing checks.
@@ -654,6 +742,7 @@ Before starting, **ask the user (§9 D1, D2)**:
   - Jobs use an `abaqus_v6.env` in the job directory with `usub_lib_dir=r'<abs path>'` and **no** `user=` argument. **VERIFY** on the host that the produced library name (`standardU.dll` on Windows, `libstandardU.so` on Linux) is picked up.
   - Fallback: a script that concatenates `module/*.for` and the UEL into one flat `uel_flat.for` (resolving includes), used with `user=uel_flat.for`.
   - *Open (host only), 2026-11-10:* the build itself needs the Abaqus host. Ready on this side: the runner writes `abaqus_v6.env` with `usub_lib_dir = r'<dir>'` into every job directory (config `user_lib_dir`, `mass_lib_dir`); the fallback script `scripts/make_flat_uel.py` exists and is tested on both UEL sources (config `user_source`, `mass_source`; the originals are not changed).
+  - *Built on the host 2026-11-22* (see "Status on the Abaqus PC" at the top): Intel Fortran Classic 2021.4.0; `abaqus make` COMPLETED for both sources; `standardU.dll` in `nistep_uel\stiffness` and `nistep_uel\mass`. The single-element jobs ran with it through `usub_lib_dir`. Tick this box once the P8.6 single-element run passes.
 - [x] **P8.3** `runners/local.py` with `LocalRunner.run(jobs) -> results`.
   - One directory per job, `work/<jobname>/` (jobname `j` + 12 hex characters of the key), containing `<job>.inp` and `abaqus_v6.env`.
   - Command: `abaqus job=<job> input=<job>.inp double=both output_precision=full interactive ask_delete=OFF cpus=1`, via `subprocess.run(..., shell=True on Windows, timeout=timeout_s, capture_output=True)`.
@@ -695,6 +784,14 @@ Before starting, **ask the user (§9 D1, D2)**:
     - `nistep/diagnostics.py`: `smoke_test`, `cubic_exactness`, `matrix_rel_diff`, `symmetry_error`, `shortest_edge`. The default test amplitude is 10 % of the shortest element edge.
     - Tests (`test_diagnostics.py`): all checks pass through the mock (single element and MEMS); a non-polynomial tangent (mock mode `nonpoly`, imitating B9) fails `c_cubic_exactness` and `b_KU_vs_pysvk` while the `U = 0` checks still pass; the script returns exit code 1 in that case.
     - **Record here after the host run:** each printed value, the seconds per job (library and flat source), the Abaqus version, and the outcome of the three VERIFY items of P8.3.
+  - *First host run, 2026-11-22 (single element):*
+    - **What failed.** The run stopped at the mass job with `matrix type STIFFNESS, expected MASS`. Abaqus takes the label of the element-matrix output from the deck's `*Element Matrix Output` request, not from the UEL library, and every job deck asked for `Stiffness=Yes`.
+    - **The fix.**
+      - Mass jobs now ask for `Mass=Yes` (`JobDeck.render(..., output="mass")`).
+      - `AbaqusBackend` checks that the values match the expected kind, using the rigid-translation ratio `translation_ratio`. This still catches swapped library folders.
+      - New tests: `test_render_mass_output_request`, `test_mass_job_requests_mass_output`, `test_translation_ratio_separates_stiffness_and_mass`.
+      - Python suite: 196 passed.
+    - **Next.** Rerun on the host after `git pull`.
 - [x] **P8.7** `backends/replay.py`: serves `K_tg` from a disk cache copied from the host. A miss raises `ReplayMiss` with the U key. Used to debug production runs on this PC.
   - *Done 2026-11-10:* `ReplayBackend(cache_dir, fingerprint=None)`; config `[backend] kind = "replay"` with `[cache] dir` (and `replay_fingerprint` if the folder holds more than one model). The engine now writes `backend_info.npz` (M, size, recorded backend kind) next to the cache, so a replay needs no deck and no Abaqus. Tested: a replayed engine reproduces the recorded results bit for bit with 0 jobs; a state that was never recorded raises `ReplayMiss` with its 64-character key.
   - **P8 status:** Python suite 172 passed (180 on 2026-11-11, after P9 and the encoding fix). Open: P8.2 and P8.6 (both need the Abaqus host) and decisions D1–D3 (§9).

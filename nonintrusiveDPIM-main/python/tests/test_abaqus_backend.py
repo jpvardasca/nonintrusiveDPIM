@@ -143,11 +143,41 @@ def test_timeout(tmp_path):
 
 
 def test_wrong_library_detected(tmp_path):
+    # Abaqus labels the output by the deck's request, so a swapped library is found from the
+    # content of the matrices (rigid translations), not from the *MATRIX,TYPE= label
     lib = {"stiffness": str(tmp_path / "uel_lib" / "mass")}  # the mass UEL by mistake
     runner = LocalRunner(tmp_path / "work", MOCK, lib_dirs=lib, env=mock_env())
     ab = AbaqusBackend(model("single"), runner)
-    with pytest.raises(RuntimeError, match="matrix type MASS, expected STIFFNESS"):
+    with pytest.raises(RuntimeError, match="look like mass matrices"):
         ab.stiffness0()
+    lib = {"stiffness": str(tmp_path / "uel_lib" / "stiffness"),
+           "mass": str(tmp_path / "uel_lib" / "stiffness")}  # the stiffness UEL for the mass
+    runner = LocalRunner(tmp_path / "w2", MOCK, lib_dirs=lib, env=mock_env())
+    ab = AbaqusBackend(model("single"), runner)
+    with pytest.raises(RuntimeError, match="look like stiffness matrices"):
+        ab.mass()
+
+
+def test_mass_job_requests_mass_output(tmp_path):
+    ab, _ = make(tmp_path)
+    U = np.zeros(ab.n_dof)
+    assert "Mass=Yes" in ab.make_job(U, "mass").inp_text
+    assert "Stiffness=Yes" in ab.make_job(U, "stiffness").inp_text
+    assert "Mass=Yes" not in ab.make_job(U, "stiffness").inp_text
+
+
+def test_translation_ratio_separates_stiffness_and_mass():
+    from nistep.backends.abaqus import TRANSLATION_TOL, translation_ratio
+    from nistep.mtx_io import format_element_matrices, parse_element_matrices
+
+    ref = backend("single")
+    m = model("single")
+    Kt = ref.element_tangents(rand_u(ref, 3, 0.1))
+    Me = ref.element_masses()
+    assert translation_ratio(Kt) < 1e-12 and translation_ratio(Me) > 0.5
+    # also after a round trip through a 15-digit file, the precision of real .mtx output
+    em = parse_element_matrices(format_element_matrices(m.elem_labels, m.conn, Kt, sig_digits=15))
+    assert translation_ratio(em.matrices) < 1e-6 < TRANSLATION_TOL
 
 
 def test_missing_command(tmp_path):

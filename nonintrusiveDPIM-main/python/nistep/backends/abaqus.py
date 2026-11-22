@@ -35,6 +35,26 @@ from .base import BaseBackend
 
 log = logging.getLogger(__name__)
 
+# a stiffness matrix gives |Ke t| / |Ke| at round-off level (about 1e-14, or 1e-7 with 8-digit
+# output) for the rigid translations t; a consistent mass gives a ratio of order 1
+TRANSLATION_TOL = 1e-2
+
+
+def translation_ratio(mats: np.ndarray) -> float:
+    """Largest ``max|Ke t| / max|Ke|`` over the elements and the three rigid translations ``t``.
+
+    ``mats`` is ``(n_elem, nd, nd)`` with node-major local DOFs (1, 2, 3 per node). Total-
+    Lagrangian internal forces do not change under a rigid translation, so ``K_tg(U) t = 0``
+    for every ``U``; the mass matrix maps ``t`` to the element's mass distribution.
+    """
+    nd = mats.shape[1]
+    T = np.zeros((nd, 3))
+    for d in range(3):
+        T[d::3, d] = 1.0
+    num = np.abs(mats @ T).max(axis=(1, 2))
+    den = np.abs(mats).max(axis=(1, 2))
+    return float(np.max(num / np.maximum(den, np.finfo(float).tiny)))
+
 
 class AbaqusBackend(BaseBackend):
     kind = "abaqus"
@@ -104,7 +124,8 @@ class AbaqusBackend(BaseBackend):
 
     def make_job(self, U: np.ndarray, library: str = "stiffness") -> AbaqusJob:
         name = self.job_name(U, library)
-        return AbaqusJob(name=name, inp_text=self.deck.render(U, name), matrix_file=name,
+        output = "mass" if library == "mass" else "stiffness"
+        return AbaqusJob(name=name, inp_text=self.deck.render(U, name, output), matrix_file=name,
                          n_elements=self.model.n_elem, library=library)
 
     def _matrices(self, U_list: list[np.ndarray], library: str) -> list[sp.csr_matrix]:
@@ -125,9 +146,17 @@ class AbaqusBackend(BaseBackend):
             em = parse_element_matrices(res.mtx_text)
             if em.kind != expected:
                 raise RuntimeError(f"job {job.name}: matrix type {em.kind}, expected {expected} "
-                                   "(wrong UEL library?)")
+                                   "(the *Element Matrix Output request of the deck)")
             if em.dofs != (1, 2, 3):
                 raise RuntimeError(f"job {job.name}: unexpected element DOFs {em.dofs}")
+            # Abaqus labels the output by the deck's request, not by the UEL library, so check
+            # the content: a stiffness matrix maps rigid translations to zero, a mass does not.
+            r = translation_ratio(em.matrices)
+            looks = "STIFFNESS" if r < TRANSLATION_TOL else "MASS"
+            if looks != expected:
+                raise RuntimeError(f"job {job.name}: the element matrices look like {looks.lower()} "
+                                   f"matrices (rigid-translation ratio {r:.1e}), expected "
+                                   f"{expected.lower()}; wrong UEL library?")
             order = self.asm.check_element_order(em.labels, em.nodes, self.model.elem_labels)
             out.append(self.asm.assemble(em.matrices[order]))
         return out

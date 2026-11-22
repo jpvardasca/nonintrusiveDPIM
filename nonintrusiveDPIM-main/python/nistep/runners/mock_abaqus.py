@@ -10,7 +10,9 @@ Abaqus element-matrix layout, plus ``<job>.sta``, ``<job>.msg`` and ``<job>.dat`
 
 Which matrices it writes mirrors the real set-up: the mass UEL is selected through the
 library directory in ``abaqus_v6.env`` (a path whose last folder contains "mass"), or
-through a ``user=`` source whose file name contains "mass".
+through a ``user=`` source whose file name contains "mass". As in Abaqus, the label of the
+output (``*MATRIX,TYPE=MASS`` or ``STIFFNESS``) comes from the deck's output request
+(``Mass=Yes`` or ``Stiffness=Yes``), not from the library: the UEL only fills AMATRX.
 
 ``NISTEP_MOCK_MODE`` injects faults (comma-separated): ``fail`` (exit code 1), ``no_mtx``,
 ``truncated`` (one element block missing), ``no_sta``, ``bad_sta``, ``symmetric`` (lower
@@ -83,12 +85,15 @@ def main(argv: list[str]) -> int:
                    if "ENCASTRE" in ln.upper())
     be = PySVKBackend(model, clamped)
     if _wants_mass(args):
-        Ke, kind = be.element_masses(), "MASS"
+        Ke = be.element_masses()
     else:
         U = read_prescribed(text, be.dofmap)
-        Ke, kind = be.element_tangents(U), "STIFFNESS"
+        Ke = be.element_tangents(U)
         if "nonpoly" in modes:
             Ke = Ke * (1.0 + float(abs(U).max()) ** 3)
+    request = next((ln for ln in lines
+                    if ln.strip().upper().startswith("*ELEMENT MATRIX OUTPUT")), "")
+    kind = "MASS" if re.search(r"\bmass\s*=\s*yes\b", request, re.IGNORECASE) else "STIFFNESS"
     labels, conn = model.elem_labels, model.conn
     if "truncated" in modes:
         labels, conn, Ke = labels[:-1], conn[:-1], Ke[:-1]

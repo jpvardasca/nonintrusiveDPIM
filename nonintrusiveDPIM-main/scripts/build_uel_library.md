@@ -102,8 +102,13 @@ Record in `PLAN.md` (P8.6): the values printed, the seconds per job, and the Aba
   finish. The error message ends with the tail of the `.msg`, `.dat` and `.log` files, and the
   job folder is kept under the work folder. (**VERIFY** that your Abaqus version writes this
   exact sentence in `<job>.sta`.)
-- **`matrix type MASS, expected STIFFNESS`** (or the reverse): the two library folders are
-  swapped.
+- **`the element matrices look like mass matrices ... wrong UEL library?`** (or the reverse):
+  the two library folders are swapped. The check looks at the matrix values: a stiffness
+  matrix maps a rigid translation to zero, a mass matrix does not.
+- **`matrix type STIFFNESS, expected MASS`** (or the reverse): the label comes from the
+  `*Element Matrix Output` request in the job deck (`Stiffness=Yes` or `Mass=Yes`), not
+  from the library. The job decks set it for you, so this message points to an old copy of
+  `nistep`: run `git pull`. (Found on the first host run, 2026-11-22.)
 - **`worker down`**: the worker is not running, or the two machines do not see the same
   folder.
 - **Licence errors**: lower `--parallel` / `max_parallel`.

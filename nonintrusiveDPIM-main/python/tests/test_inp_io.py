@@ -115,6 +115,25 @@ def test_render_rejects_bad_input():
         deck.render(np.full(dm.n_dof, np.nan), "j")
     with pytest.raises(ValueError):
         deck.render(np.zeros(dm.n_dof), "bad name.mtx")
+    with pytest.raises(ValueError):
+        deck.render(np.zeros(dm.n_dof), "j", output="damping")
+
+
+def test_render_mass_output_request():
+    # Abaqus labels the element matrices by the output request, not by the UEL library:
+    # a mass job must ask for Mass=Yes (found on the Abaqus host, P8.6).
+    m = model("single")
+    dm = m.dofmap("Set-2")
+    deck = JobDeck(m, dm, "Set-2")
+    U = np.zeros(dm.n_dof)
+    request = lambda text: next(ln for ln in text.splitlines()
+                                if ln.upper().startswith("*ELEMENT MATRIX OUTPUT"))
+    stiff = request(deck.render(U, "jk"))
+    mass = request(deck.render(U, "jm", output="mass"))
+    assert "Stiffness=Yes" in stiff and "Mass=" not in stiff
+    assert "Mass=Yes" in mass and "Stiffness=" not in mass
+    assert "File Name=jm," in mass
+    assert mass.replace("jm", "jk").replace("Mass=Yes", "Stiffness=Yes") == stiff
 
 
 def test_prepare_base_inp_adds_node_sets():
